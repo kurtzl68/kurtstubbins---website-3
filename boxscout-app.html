@@ -1,0 +1,1702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>BoxScout — Moving Tracker</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{font-size:16px;-webkit-text-size-adjust:100%;height:100%;overflow:hidden}
+body{font-family:Georgia,serif;background:var(--bg);color:var(--ink);
+  height:100vh;overflow:hidden;display:flex;flex-direction:column}
+button,input,select,textarea{font-family:inherit;font-size:inherit}
+img{display:block;max-width:100%}
+
+:root{
+  --bg:#E8E5DF;--surface:#F0EDE8;--card:#FFFFFF;
+  --border:#D0CCC5;--border2:#C0BCB4;
+  --ink:#1A1A1A;--ink2:#555050;--ink3:#999490;
+  --accent:#000000;--accent-fg:#FFFFFF;
+  --hdr-bg:#1A1A1A;--hdr-fg:#FFFFFF;
+  --ent-bg:#FAFAFA;--sel-bg:#1A1A1A;--sel-fg:#FFFFFF;
+  --dz-bg:#F5F2EE;--btn-ghost-bg:#E0DDD7;--btn-ghost-fg:#1A1A1A;
+  --sb-bg:#D0CCC5;--sb-fg:#777370;
+  --green:#2A7A2A;--green-bg:#E8F5E8;
+  --blue:#1A4A9A;--blue-bg:#E8EEF8;
+  --red:#AA0000;--red-bg:#FFE5E5;
+  --orange:#8A5A00;--orange-bg:#FFF8E8;
+  --status-open:#888888;--status-packed:#2A7A2A;
+  --status-delivered:#1A4A9A;--status-unpacked:#8A5A00;
+}
+[data-theme="dark"]{
+  --bg:#1A1A1A;--surface:#202020;--card:#252525;
+  --border:#333333;--border2:#444444;
+  --ink:#E8E5DF;--ink2:#AAAAAA;--ink3:#666666;
+  --accent:#FFFFFF;--accent-fg:#1A1A1A;
+  --hdr-bg:#111111;--hdr-fg:#E8E5DF;
+  --ent-bg:#2E2E2E;--sel-bg:#FFFFFF;--sel-fg:#1A1A1A;
+  --dz-bg:#2A2A2A;--btn-ghost-bg:#2E2E2E;--btn-ghost-fg:#E8E5DF;
+  --sb-bg:#111111;--sb-fg:#666666;
+  --green:#4A9A4A;--green-bg:#1A2A1A;
+  --blue:#5A8ACA;--blue-bg:#1A2240;
+  --red:#DD4444;--red-bg:#3A1A1A;
+  --orange:#C8A96E;--orange-bg:#2A2010;
+  --status-open:#888888;--status-packed:#4A9A4A;
+  --status-delivered:#5A8ACA;--status-unpacked:#C8A96E;
+}
+
+/* HEADER */
+header{
+  background:var(--hdr-bg);color:var(--hdr-fg);padding:12px 20px;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  position:sticky;top:0;z-index:50;flex-shrink:0;
+}
+.logo{font-family:Georgia,serif;font-size:22px;font-weight:700;
+  letter-spacing:1.8px;color:var(--hdr-fg);display:flex;align-items:center;gap:10px}
+.logo-icon{font-size:20px;line-height:1}
+.logo-box{font-weight:700;color:var(--hdr-fg)}
+.logo-scout{font-weight:700;color:#CC2200}
+.hdr-right{display:flex;gap:6px;align-items:center}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:7px 14px;border:none;border-radius:0;
+  font-family:Arial,Helvetica,sans-serif;font-size:10px;font-weight:700;
+  letter-spacing:1.5px;text-transform:uppercase;
+  cursor:pointer;transition:opacity .15s;white-space:nowrap;
+}
+.btn:active{opacity:.8}
+.btn-ghost{background:rgba(255,255,255,.12);color:var(--hdr-fg)}
+.btn-ghost:hover{background:rgba(255,255,255,.22)}
+.btn-primary{background:var(--accent);color:var(--accent-fg)}
+.btn-primary:hover{opacity:.85}
+.btn-danger{background:var(--red-bg);color:var(--red)}
+.btn-purple{background:var(--surface);color:var(--ink2);border:1px solid var(--border)}
+.btn-sm{padding:5px 10px;font-size:9px}
+.theme-btn{
+  background:none;border:1px solid rgba(255,255,255,.3);color:var(--hdr-fg);
+  padding:5px 10px;font-family:Arial,Helvetica,sans-serif;
+  font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
+  cursor:pointer;border-radius:0;
+}
+.theme-btn:hover{background:rgba(255,255,255,.12)}
+
+/* BANNER */
+.banner{display:none;padding:8px 20px;font-family:Arial,Helvetica,sans-serif;
+  font-size:11px;font-weight:500;text-align:center;flex-shrink:0}
+.banner.show{display:block}
+.banner.info{background:var(--blue-bg);color:var(--blue)}
+.banner.success{background:var(--green-bg);color:var(--green)}
+.banner.warn{background:var(--orange-bg);color:var(--orange)}
+
+/* APP LAYOUT */
+.app-body{display:flex;flex:1;overflow:hidden;min-height:0}
+
+/* LEFT PANEL */
+.left-panel{
+  display:flex;flex-direction:column;flex-shrink:0;
+  background:var(--surface);border-right:1px solid var(--border);
+  overflow:hidden;min-width:140px;
+}
+.left-hdr{display:flex;align-items:center;gap:8px;padding:10px 12px 6px;flex-shrink:0}
+.left-hdr-lbl{font-family:Arial,Helvetica,sans-serif;font-size:7px;font-weight:700;
+  letter-spacing:3px;text-transform:uppercase;color:var(--ink3)}
+.left-count{font-family:Arial,Helvetica,sans-serif;font-size:10px;color:var(--ink3)}
+.left-list{flex:1;overflow-y:auto;overflow-x:hidden}
+.left-item{
+  display:block;width:100%;text-align:left;padding:7px 12px;
+  font-family:'Courier New',monospace;font-size:11.5px;color:var(--ink2);
+  background:transparent;border:none;border-bottom:1px solid var(--border);
+  cursor:pointer;white-space:nowrap;transition:background .1s,color .1s;
+}
+.left-item:hover{background:var(--card);color:var(--ink)}
+.left-item.selected{background:var(--sel-bg);color:var(--sel-fg)}
+.left-btns{display:flex;gap:6px;flex-shrink:0;border-top:1px solid var(--border);padding:8px}
+.left-btns .btn{flex:1;justify-content:center}
+
+/* RIGHT PANEL */
+.right-panel{flex:1;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column}
+.right-inner{padding:18px 22px 80px;max-width:100%}
+
+/* MOBILE TOGGLE BUTTON — hidden on desktop */
+.left-toggle{
+  display:none;
+  background:var(--surface);color:var(--ink2);
+  border:1px solid var(--border);border-radius:0;
+  font-family:Arial,Helvetica,sans-serif;font-size:13px;
+  padding:6px 10px;cursor:pointer;flex-shrink:0;
+}
+.left-toggle:hover{background:var(--card);color:var(--ink)}
+
+/* MOBILE: portrait screens narrower than 600px */
+@media (max-width:599px){
+  /* Show toggle button */
+  .left-toggle{display:inline-flex;align-items:center}
+
+  /* Left panel hidden by default, slides in as overlay when open */
+  .left-panel{
+    position:fixed;top:0;left:0;bottom:0;z-index:80;
+    transform:translateX(-100%);transition:transform .22s ease;
+    min-width:0;width:75vw;max-width:280px;
+    box-shadow:4px 0 16px rgba(0,0,0,.18);
+  }
+  .left-panel.mobile-open{transform:translateX(0)}
+
+  /* Right panel fills full width */
+  .app-body{flex-direction:column}
+  .right-panel{width:100%}
+  .right-inner{padding:12px 12px 80px}
+
+  /* Overlay backdrop */
+  .left-backdrop{
+    display:none;position:fixed;inset:0;z-index:79;
+    background:rgba(0,0,0,.4);pointer-events:none;
+  }
+  .left-backdrop.show{display:block;pointer-events:auto}
+
+  /* Compact stats on mobile */
+  .stats{grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px}
+  .stat-n{font-size:20px}
+
+  /* Compact toolbar */
+  .toolbar{gap:6px}
+  .search-wrap input{font-size:13px}
+  select.sel{font-size:11px;padding:6px 8px}
+}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.stat{background:var(--card);border:1px solid var(--border);padding:14px 10px;text-align:center}
+.stat-n{font-family:Georgia,serif;font-size:26px;font-weight:700;line-height:1;color:var(--ink)}
+.stat-l{font-family:Arial,Helvetica,sans-serif;font-size:8px;font-weight:700;
+  letter-spacing:2px;text-transform:uppercase;color:var(--ink3);margin-top:4px}
+
+/* TOOLBAR */
+.toolbar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.search-wrap{flex:1;min-width:160px;position:relative}
+.search-wrap input{
+  width:100%;padding:8px 12px 8px 34px;border:1px solid var(--border);border-radius:0;
+  background:var(--card);color:var(--ink);outline:none;
+  font-family:Georgia,serif;font-size:13px;
+}
+.search-wrap input:focus{border-color:var(--ink)}
+.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);
+  font-size:13px;pointer-events:none;color:var(--ink3)}
+select.sel{
+  padding:8px 12px;border:1px solid var(--border);border-radius:0;
+  background:var(--card);color:var(--ink);outline:none;
+  font-family:Arial,Helvetica,sans-serif;font-size:11px;cursor:pointer;
+}
+select.sel:focus{border-color:var(--ink)}
+
+/* SAVE BAR */
+.save-bar{
+  background:var(--orange-bg);border:1px solid var(--orange);
+  padding:8px 14px;margin-bottom:12px;
+  display:none;align-items:center;justify-content:space-between;gap:10px;
+  font-family:Arial,Helvetica,sans-serif;font-size:11px;color:var(--orange);
+}
+.save-bar.show{display:flex}
+
+/* CAT MANAGER */
+.cat-manager{background:var(--card);border:1px solid var(--border);padding:16px;margin-bottom:14px;display:none}
+.cat-manager.open{display:block}
+.cat-manager h3{font-family:Arial,Helvetica,sans-serif;font-size:9px;font-weight:700;
+  letter-spacing:3px;text-transform:uppercase;color:var(--ink3);margin-bottom:12px}
+.cat-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.cat-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;
+  font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:600;
+  background:var(--surface);color:var(--ink2);border:1px solid var(--border)}
+.cat-chip.default{color:var(--ink3)}
+.cat-chip-del{background:none;border:none;cursor:pointer;color:inherit;opacity:.5;font-size:13px;padding:0;line-height:1}
+.cat-chip-del:hover{opacity:1}
+.cat-add-row{display:flex;gap:8px}
+.cat-add-row input{flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:0;
+  background:var(--ent-bg);color:var(--ink);outline:none;font-family:Georgia,serif;font-size:13px}
+.cat-add-row input:focus{border-color:var(--ink)}
+.cat-add-row button{padding:7px 14px;border:none;border-radius:0;
+  background:var(--accent);color:var(--accent-fg);
+  font-family:Arial,Helvetica,sans-serif;font-size:9px;font-weight:700;
+  letter-spacing:1.5px;text-transform:uppercase;cursor:pointer}
+.cat-note{font-family:Arial,Helvetica,sans-serif;font-size:10px;color:var(--ink3);margin-top:8px}
+
+/* BOX CARDS */
+.boxes{display:flex;flex-direction:column;gap:0}
+.box-card{background:var(--card);border:1px solid var(--border);
+  border-top:none;overflow:hidden;border-left-width:4px}
+.box-card:first-child{border-top:1px solid var(--border)}
+.box-card[data-status="open"]      {border-left-color:var(--status-open)}
+.box-card[data-status="packed"]    {border-left-color:var(--status-packed)}
+.box-card[data-status="delivered"] {border-left-color:var(--status-delivered)}
+.box-card[data-status="unpacked"]  {border-left-color:var(--status-unpacked)}
+.box-head{display:flex;align-items:center;gap:12px;padding:16px 18px 12px;cursor:pointer}
+.box-num{font-family:Georgia,serif;font-size:28px;font-weight:700;
+  min-width:52px;text-align:left;color:var(--ink);line-height:1;flex-shrink:0}
+.box-meta{flex:1;min-width:0}
+.box-name{font-family:Georgia,serif;font-weight:700;font-size:15px;
+  color:var(--ink);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.box-sub{font-family:Arial,Helvetica,sans-serif;font-size:11px;color:var(--ink3);
+  margin-top:3px;display:flex;flex-wrap:wrap;gap:8px}
+.status-pill{border:none;border-radius:0;padding:4px 10px;
+  font-family:Arial,Helvetica,sans-serif;font-size:9px;font-weight:700;
+  letter-spacing:1px;text-transform:uppercase;cursor:pointer;flex-shrink:0}
+.pill-open      {background:var(--surface);color:var(--status-open);border:1px solid var(--border)}
+.pill-packed    {background:var(--green-bg);color:var(--status-packed)}
+.pill-delivered {background:var(--blue-bg);color:var(--status-delivered)}
+.pill-unpacked  {background:var(--orange-bg);color:var(--status-unpacked)}
+.fragile-badge{background:var(--red-bg);color:var(--red);
+  font-family:Arial,Helvetica,sans-serif;font-size:9px;font-weight:700;
+  letter-spacing:1px;padding:2px 6px;text-transform:uppercase}
+.cat-badge{background:none;color:var(--ink);font-size:0.7em;font-weight:400;padding:0;
+  text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px;
+  font-family:Georgia,serif}
+.chevron{font-size:14px;color:var(--ink3);flex-shrink:0;transition:transform .2s;margin-left:4px}
+.box-card.open .chevron{transform:rotate(180deg)}
+
+/* BOX BODY */
+.box-body{display:none;padding:0 18px 18px;border-top:1px solid var(--border)}
+.box-card.open .box-body{display:block}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+@media(max-width:520px){.fields{grid-template-columns:1fr}}
+.field{display:flex;flex-direction:column;gap:4px}
+.field.wide{grid-column:1/-1}
+.field label{font-family:Arial,Helvetica,sans-serif;font-size:8px;font-weight:700;
+  letter-spacing:2px;text-transform:uppercase;color:var(--ink3)}
+.field input,.field select,.field textarea{
+  padding:8px 10px;border:1px solid var(--border);border-radius:0;
+  background:var(--ent-bg);color:var(--ink);outline:none;
+  font-family:Georgia,serif;font-size:13px;transition:border-color .15s;
+}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--ink);background:var(--card)}
+.field textarea{resize:vertical;min-height:66px}
+.field select.cat-select{border-color:var(--border)}
+.field select.cat-select:focus{border-color:var(--ink)}
+
+/* INLINE CUSTOM CATEGORY */
+.custom-cat-row{display:none;flex-direction:column;gap:4px}
+.custom-cat-row.show{display:flex}
+.custom-cat-row input{padding:8px 10px;border:1px solid var(--border);border-radius:0;
+  background:var(--card);color:var(--ink);outline:none;font-family:Georgia,serif;font-size:13px}
+.custom-cat-row input:focus{border-color:var(--ink)}
+.custom-cat-hint{font-family:Arial,Helvetica,sans-serif;font-size:10px;color:var(--ink3)}
+
+/* PHOTOS */
+.photo-sec{margin-top:16px}
+.photo-sec-label{font-family:Arial,Helvetica,sans-serif;font-size:8px;font-weight:700;
+  letter-spacing:2px;text-transform:uppercase;color:var(--ink3);margin-bottom:8px}
+.photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:10px}
+.thumb{position:relative;aspect-ratio:1;overflow:hidden;
+  background:var(--border);border:1px solid var(--border2)}
+.thumb img{width:100%;height:100%;object-fit:cover;cursor:zoom-in;display:block}
+.thumb-del{position:absolute;top:3px;right:3px;background:rgba(0,0,0,.65);color:#fff;
+  border:none;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;
+  display:flex;align-items:center;justify-content:center}
+.thumb-del:hover{background:var(--red)}
+.drop-zone{border:1px dashed var(--border2);border-radius:0;
+  background:var(--dz-bg);padding:20px 14px;text-align:center;
+  position:relative;cursor:pointer;transition:all .2s}
+.drop-zone:hover,.drop-zone.over{border-color:var(--ink);background:var(--card)}
+.drop-zone input[type=file]{position:absolute;top:0;left:0;width:100%;height:100%;
+  opacity:0;cursor:pointer;z-index:2;font-size:0}
+.dz-icon{font-size:22px;margin-bottom:6px;pointer-events:none;color:var(--ink3)}
+.dz-text{font-family:Arial,Helvetica,sans-serif;font-size:11px;color:var(--ink3);pointer-events:none}
+.dz-text strong{color:var(--ink);font-weight:700;letter-spacing:.5px;
+  text-transform:uppercase;font-size:10px}
+
+/* ADD BOX */
+.add-btn{display:flex;align-items:center;justify-content:center;gap:8px;
+  width:100%;padding:16px;margin-top:8px;border:1px dashed var(--border2);border-radius:0;
+  background:transparent;cursor:pointer;
+  font-family:Arial,Helvetica,sans-serif;font-size:9px;font-weight:700;
+  letter-spacing:2px;text-transform:uppercase;color:var(--ink3);transition:all .2s}
+.add-btn:hover{border-color:var(--ink);color:var(--ink);background:var(--card)}
+
+/* LIGHTBOX */
+#lb{display:none;position:fixed;inset:0;z-index:200;
+  background:rgba(0,0,0,.92);align-items:center;justify-content:center;padding:16px}
+#lb.show{display:flex}
+#lb img{max-width:100%;max-height:88vh}
+#lb-close{position:absolute;top:16px;right:20px;background:rgba(255,255,255,.15);color:#fff;
+  border:none;width:36px;height:36px;font-size:20px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center}
+
+/* MODALS */
+.overlay{display:none;position:fixed;inset:0;z-index:100;
+  background:rgba(0,0,0,.5);align-items:flex-end;justify-content:center;
+  padding-bottom:env(safe-area-inset-bottom,0px)}
+.overlay.show{display:flex}
+@media(min-width:540px){.overlay{align-items:center}}
+.modal{background:var(--card);border:1px solid var(--border);
+  padding:24px 20px 28px;width:100%;max-width:480px}
+.modal h2{font-family:Georgia,serif;font-size:18px;font-weight:700;margin-bottom:6px;color:var(--ink)}
+.modal p{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:var(--ink2);
+  margin-bottom:16px;line-height:1.5}
+.modal-opts{display:flex;flex-direction:column;gap:8px}
+.modal-opt{padding:14px 16px;border:1px solid var(--border);border-radius:0;
+  background:var(--surface);text-align:left;cursor:pointer;transition:all .2s;
+  display:flex;flex-direction:column;gap:3px}
+.modal-opt:hover{border-color:var(--ink);background:var(--card)}
+.modal-opt strong{font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:700;color:var(--ink)}
+.modal-opt span{font-family:Arial,Helvetica,sans-serif;font-size:11px;color:var(--ink3)}
+.modal-cancel{margin-top:10px;width:100%;padding:10px;border:1px solid var(--border);border-radius:0;
+  background:transparent;font-family:Arial,Helvetica,sans-serif;font-size:9px;font-weight:700;
+  letter-spacing:1.5px;text-transform:uppercase;color:var(--ink3);cursor:pointer}
+.modal-cancel:hover{background:var(--surface)}
+
+/* EMPTY */
+.empty{text-align:center;padding:60px 20px;color:var(--ink3)}
+.empty-icon{font-size:44px;margin-bottom:12px}
+.empty p{font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.6;color:var(--ink3)}
+
+/* AUTOCOMPLETE */
+.field .ac-hint{font-family:Arial,Helvetica,sans-serif;font-size:9px;color:var(--ink3);margin-top:2px}
+.field input[list]{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23999490' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
+
+/* CONTENTS SUGGESTIONS */
+.contents-wrap{display:flex;flex-direction:column;gap:6px}
+.contents-wrap textarea{resize:vertical;min-height:100px;white-space:pre-wrap;font-size:13px;line-height:1.6}
+.contents-suggestions{display:flex;flex-direction:column;gap:0}
+.cs-toggle{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;
+  border:1px solid var(--border);border-radius:0;background:var(--surface);color:var(--ink3);
+  font-family:Arial,Helvetica,sans-serif;font-size:9px;font-weight:700;
+  letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;text-align:left;
+  transition:all .15s;width:fit-content}
+.cs-toggle:hover{border-color:var(--ink);color:var(--ink)}
+.cs-list{display:none;flex-direction:column;gap:0;margin-top:6px;max-height:260px;
+  overflow-y:auto;border:1px solid var(--border);border-radius:0;
+  background:var(--card);padding:4px}
+.cs-list.open{display:flex}
+.cs-item{padding:9px 12px;font-family:Georgia,serif;font-size:12px;color:var(--ink2);
+  line-height:1.5;cursor:pointer;text-align:left;border:none;background:transparent;
+  white-space:normal;overflow:visible;word-break:break-word;transition:background .1s}
+.cs-item:hover{background:var(--surface);color:var(--ink)}
+
+@media print{
+  /* ── PAGE SETUP: portrait 8.5x11 ── */
+  @page{
+    size:8.5in 11in portrait;
+    margin:0.5in;
+  }
+
+  /* ── HIDE ALL SCREEN UI ── */
+  header,
+  .toolbar,
+  .stats,
+  .save-bar,
+  .add-btn,
+  .btn,
+  .chevron,
+  .thumb-del,
+  .drop-zone,
+  .cat-manager,
+  .banner,
+  #lb,
+  .overlay,
+  .box-head .status-pill,
+  .box-head button,
+  .fields .field select,
+  .fields .field input[type=text],
+  .fields .field input[type=number],
+  .fields .field textarea,
+  .custom-cat-row,
+  .field label + select,
+  div[style*="justify-content:flex-end"]
+  { display:none!important }
+
+  /* ── BODY & MAIN ── */
+  html,body{ background:white!important; font-size:11pt; color:#000; }
+  main{ max-width:100%; padding:0; margin:0; }
+
+  /* ── ONE BOX = ONE FULL PAGE ── */
+  .boxes{ display:block!important; }
+
+  .box-card{
+    display:block!important;
+    page-break-before: always;
+    break-before: page;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    border: 2px solid #333!important;
+    border-left-width: 6px!important;
+    border-radius: 0!important;
+    box-shadow: none!important;
+    background: white!important;
+    /* fill the printable area: 11in - 1in margins = 10in tall */
+    min-height: 10in;
+    height: 10in;
+    display: flex!important;
+    flex-direction: column!important;
+    overflow: hidden;
+  }
+  /* first card doesn't need a forced page break before it */
+  .box-card:first-child{ page-break-before:auto; break-before:auto; }
+
+  /* status colour on left border */
+  .box-card[data-status="open"]     { border-left-color:#999!important }
+  .box-card[data-status="packed"]   { border-left-color:#16a34a!important }
+  .box-card[data-status="delivered"]{ border-left-color:#2563eb!important }
+  .box-card[data-status="unpacked"] { border-left-color:#d97706!important }
+
+  /* ── CARD HEADER ── */
+  .box-head{
+    display:flex!important;
+    align-items:center;
+    gap:14px;
+    padding:18px 20px 14px!important;
+    border-bottom:1.5px solid #ddd;
+    flex-shrink:0;
+    cursor:default;
+  }
+  .box-num{
+    font-size:52pt!important;
+    font-weight:900!important;
+    min-width:80px!important;
+    line-height:1;
+    color:#000!important;
+  }
+  .box-meta{ flex:1; }
+  .box-name{
+    font-size:18pt!important;
+    font-weight:800!important;
+    color:#000!important;
+    flex-wrap:wrap;
+    gap:8px;
+    line-height:1.2;
+  }
+  .cat-badge{
+    font-size:0.7em!important;
+    padding:0!important;
+    background:none!important;
+    color:#000!important;
+    border-radius:0!important;
+    font-weight:600;
+    text-decoration:underline!important;
+    text-underline-offset:3px;
+    text-decoration-thickness:1px;
+  }
+  .fragile-badge{
+    font-size:10pt!important;
+    padding:3px 8px!important;
+    background:#fee2e2!important;
+    color:#dc2626!important;
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+  .box-sub{ font-size:10pt!important; color:#555!important; margin-top:4px!important; }
+
+  /* print status as plain text badge top-right */
+  .box-head::after{
+    content: attr(data-print-status);
+    font-size:10pt;
+    font-weight:700;
+    padding:4px 12px;
+    border:1.5px solid #ccc;
+    border-radius:20px;
+    color:#444;
+    flex-shrink:0;
+    align-self:flex-start;
+  }
+
+  /* ── CARD BODY ── */
+  .box-body{
+    display:flex!important;
+    flex-direction:column!important;
+    flex:1!important;
+    padding:16px 20px 20px!important;
+    overflow:hidden;
+  }
+
+  /* ── META FIELDS ROW (single line across top of body) ── */
+  .fields{
+    display:flex!important;
+    flex-wrap:wrap;
+    gap:0;
+    flex-shrink:0;
+    border:1px solid #ddd;
+    border-radius:6px;
+    overflow:hidden;
+    margin-bottom:14px!important;
+  }
+  .field{
+    flex:1;
+    min-width:120px;
+    padding:8px 12px!important;
+    border-right:1px solid #ddd;
+    gap:3px!important;
+  }
+  .field:last-child{ border-right:none; }
+  .field.wide{ flex:100%; border-right:none; border-top:1px solid #ddd; }
+  /* hide the wide fields (label already in header, contents handled separately) */
+  .field.wide{ display:none!important; }
+
+  .field label{
+    font-size:7.5pt!important;
+    font-weight:700!important;
+    color:#888!important;
+    text-transform:uppercase;
+    letter-spacing:.5px;
+    display:block!important;
+  }
+  /* show field values as plain text via data attributes set by JS */
+  .field .print-val{
+    font-size:11pt!important;
+    font-weight:600;
+    color:#111!important;
+    display:block!important;
+  }
+  /* hide interactive inputs in print */
+  .field input,.field select,.field textarea{ display:none!important; }
+
+  /* ── PHOTOS — 2× larger ── */
+  .photo-sec{
+    flex-shrink:0;
+    margin-bottom:14px!important;
+  }
+  .photo-sec-label{
+    font-size:8pt!important;
+    font-weight:700!important;
+    color:#888!important;
+    text-transform:uppercase;
+    margin-bottom:8px!important;
+  }
+  .photo-grid{
+    /* was auto-fill minmax(86px) — double to minmax(172px) */
+    display:grid!important;
+    grid-template-columns:repeat(auto-fill, minmax(172px,1fr))!important;
+    gap:10px!important;
+    margin-bottom:0!important;
+  }
+  .thumb{
+    aspect-ratio:1!important;
+    border-radius:6px!important;
+    border:1px solid #ccc!important;
+    overflow:hidden;
+    break-inside:avoid;
+  }
+  .thumb img{
+    width:100%!important;
+    height:100%!important;
+    object-fit:cover!important;
+  }
+
+  /* ── CONTENTS — flex-grow fills remaining page space ── */
+  .print-contents-block{
+    flex:1!important;
+    display:flex!important;
+    flex-direction:column!important;
+    border:1.5px solid #ddd;
+    border-radius:6px;
+    overflow:hidden;
+    min-height:0;
+  }
+  .print-contents-label{
+    font-size:7.5pt!important;
+    font-weight:700!important;
+    color:#888!important;
+    text-transform:uppercase;
+    letter-spacing:.5px;
+    padding:7px 12px 4px!important;
+    border-bottom:1px solid #eee;
+    flex-shrink:0;
+    display:block!important;
+  }
+  .print-contents-text{
+    flex:1!important;
+    padding:10px 12px!important;
+    font-size:13pt!important;
+    line-height:1.6!important;
+    color:#111!important;
+    white-space:pre-wrap;
+    word-break:break-word;
+    display:block!important;
+  }
+
+  /* ensure colour printing */
+  *{ -webkit-print-color-adjust:exact!important; print-color-adjust:exact!important; }
+}
+
+@media print{
+  .left-panel{display:none!important}
+  .app-body{display:block!important}
+  .right-panel{overflow:visible!important}
+  .right-inner{padding:0!important}
+}
+</style>
+</head>
+<body>
+
+<script>
+  if (sessionStorage.getItem('boxscout_auth') !== 'verified') {
+    window.location.href = 'boxscout.html';
+  }
+</script>
+
+<header>
+  <div class="logo"><span class="logo-icon">&#128230;</span><span class="logo-box">Box</span><span class="logo-scout">Scout</span></div>
+  <div class="hdr-right">
+    <button class="left-toggle" onclick="toggleLeftPanel()" id="leftToggleBtn" aria-label="Toggle box list">&#9776;</button>
+    <button class="btn btn-ghost btn-sm" onclick="showImport()">&#8679;&nbsp;&nbsp;LOAD</button>
+    <button class="btn btn-ghost btn-sm" onclick="showExport()">&#8681;&nbsp;&nbsp;SAVE</button>
+    <button class="btn btn-primary btn-sm" onclick="addBox()">+&nbsp;&nbsp;NEW BOX</button>
+    <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">&#9790;&nbsp;&nbsp;DARK</button>
+  </div>
+</header>
+
+<div class="banner" id="banner"></div>
+
+<div class="left-backdrop" id="leftBackdrop" onclick="toggleLeftPanel()"></div>
+<div class="app-body">
+
+  <!-- LEFT PANEL -->
+  <aside class="left-panel">
+    <div class="left-hdr">
+      <span class="left-hdr-lbl">Boxes</span>
+      <span class="left-count" id="leftCount"></span>
+    </div>
+    <div class="left-list" id="leftList"></div>
+    <div class="left-btns">
+      <button class="btn btn-primary btn-sm" onclick="addBox()">+ ADD</button>
+      <button class="btn btn-sm" style="background:var(--red-bg);color:var(--red)" onclick="deleteSelected()">DELETE</button>
+    </div>
+  </aside>
+
+  <!-- RIGHT PANEL -->
+  <div class="right-panel" id="rightPanel">
+    <div class="right-inner">
+
+      <!-- Stats -->
+      <div class="stats">
+        <div class="stat s-total"><div class="stat-n" id="sTotal">0</div><div class="stat-l">Total</div></div>
+        <div class="stat s-packed"><div class="stat-n" id="sPacked">0</div><div class="stat-l">Packed</div></div>
+        <div class="stat s-photo"><div class="stat-n" id="sPhoto">0</div><div class="stat-l">Photographed</div></div>
+        <div class="stat s-done"><div class="stat-n" id="sDone">0</div><div class="stat-l">Delivered</div></div>
+      </div>
+
+      <!-- Save reminder -->
+      <div class="save-bar" id="saveBar">
+        <span>&#9888; Unsaved changes &#8212; export a backup when done</span>
+        <button class="btn btn-primary btn-sm" onclick="showExport()">SAVE NOW</button>
+      </div>
+
+      <!-- Category Manager -->
+      <div class="cat-manager" id="catManager">
+        <h3>CATEGORIES</h3>
+        <div class="cat-chips" id="catChips"></div>
+        <div class="cat-add-row">
+          <input type="text" id="newCatInput" placeholder="New category name…" maxlength="40"
+            onkeydown="if(event.key==='Enter'){addCustomCat();event.preventDefault()}">
+          <button onclick="addCustomCat()">ADD</button>
+        </div>
+        <div class="cat-note">Default categories cannot be deleted. Custom categories can be removed if unused.</div>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <div class="search-wrap">
+          <span class="search-icon">&#128269;</span>
+          <input type="search" id="q" placeholder="Search boxes…" oninput="render()">
+        </div>
+        <select class="sel" id="fStatus" onchange="render()">
+          <option value="">All Statuses</option>
+          <option value="open">Open</option>
+          <option value="packed">Packed</option>
+          <option value="delivered">Delivered</option>
+          <option value="unpacked">Unpacked</option>
+        </select>
+        <select class="sel" id="fCat" onchange="render()">
+          <option value="">All Categories</option>
+        </select>
+        <button class="btn btn-sm" style="background:var(--surface);color:var(--ink2);border:1px solid var(--border)"
+          onclick="toggleCatManager()" id="catToggleBtn">CATEGORIES</button>
+        <button class="btn btn-sm" style="background:var(--surface);color:var(--ink2);border:1px solid var(--border)"
+          onclick="expandAll()" id="expandAllBtn">EXPAND ALL</button>
+      </div>
+
+      <!-- Box list -->
+      <div class="boxes" id="boxes"></div>
+      <button class="add-btn" onclick="addBox()"><span>&#43;</span>&nbsp;&nbsp;ADD NEW BOX</button>
+
+    </div><!-- /right-inner -->
+  </div><!-- /right-panel -->
+
+</div><!-- /app-body -->
+
+<!-- Lightbox -->
+<div id="lb" onclick="closeLb()">
+  <button id="lb-close" onclick="closeLb()">&#10005;</button>
+  <img id="lb-img" src="" alt="Photo">
+</div>
+
+<!-- Export Modal -->
+<div class="overlay" id="exportModal">
+  <div class="modal">
+    <h2>&#128190; Save Your Data</h2>
+    <p>This app stores everything in memory only. Export a backup after each session &#8212; reload it next time to pick up where you left off.</p>
+    <div class="modal-opts">
+      <button class="modal-opt" onclick="doExportJSON()">
+        <strong>&#128190; Save full backup (.json)</strong>
+        <span>Saves all boxes, photos AND your custom categories</span>
+      </button>
+      <button class="modal-opt" onclick="doExportCSV()">
+        <strong>&#128202; Export box list (.csv)</strong>
+        <span>Opens in Excel, Numbers, or LibreOffice &#8212; no photos</span>
+      </button>
+      <button class="modal-opt" onclick="closeModal('exportModal');printBoxes()">
+        <strong>&#128438; Print / Save as PDF</strong>
+        <span>One full page per box — portrait 8.5×11</span>
+      </button>
+    </div>
+    <button class="modal-cancel" onclick="closeModal('exportModal')">Cancel</button>
+  </div>
+</div>
+
+<!-- Import Modal -->
+<div class="overlay" id="importModal">
+  <div class="modal">
+    <h2>&#128228; Load a Backup</h2>
+    <p>Choose a <strong>.json</strong> backup file previously exported from BoxScout. This restores all your boxes, photos, and custom categories.</p>
+    <div class="modal-opts">
+      <button class="modal-opt" onclick="triggerImport()">
+        <strong>&#128193; Choose .json backup file</strong>
+        <span>Tap to browse your Files or Downloads</span>
+      </button>
+    </div>
+    <button class="modal-cancel" onclick="closeModal('importModal')">Cancel</button>
+  </div>
+</div>
+
+<input type="file" id="importFile" accept=".json" style="display:none" onchange="doImport(event)">
+
+<!-- Autocomplete datalists — rebuilt dynamically from existing box data -->
+<datalist id="dl-labels"></datalist>
+<datalist id="dl-contents"></datalist>
+
+<script>
+// ── DEFAULT CATEGORIES (alphabetized) ─────────────────────────────────────
+var DEFAULT_CATS = [
+  'Art Supplies',
+  'Books - Art',
+  'Books - General',
+  'Books - Other',
+  'Clothes',
+  'Kitchen',
+  'Materials',
+  'Media',
+  'Shoes',
+  'Tools'
+];
+
+// ── STATE ─────────────────────────────────────────────────────────────────
+var boxes       = [];
+var nextId      = 1;
+var openIds     = {};
+var dirty       = false;
+var customCats  = [];   // user-added category names (strings)
+
+// ── AUTOCOMPLETE DATALISTS ────────────────────────────────────────────────
+// Rebuilds <datalist> options from all existing box labels and contents.
+// Called on every setField for label/contents, on render, and on import.
+function rebuildDataLists(){
+  var labels   = {};
+  var contents = {};
+  boxes.forEach(function(b){
+    if(b.label   && b.label.trim())   labels[b.label.trim()]   = true;
+    if(b.contents && b.contents.trim()) contents[b.contents.trim()] = true;
+  });
+
+  var dlL = document.getElementById('dl-labels');
+  var dlC = document.getElementById('dl-contents');
+  if(dlL){
+    dlL.innerHTML = Object.keys(labels).sort(function(a,b){return a.toLowerCase().localeCompare(b.toLowerCase());}).map(function(v){
+      return '<option value="'+v.replace(/"/g,'&quot;')+'"></option>';
+    }).join('');
+  }
+  if(dlC){
+    dlC.innerHTML = Object.keys(contents).sort(function(a,b){return a.toLowerCase().localeCompare(b.toLowerCase());}).map(function(v){
+      return '<option value="'+v.replace(/"/g,'&quot;')+'"></option>';
+    }).join('');
+  }
+}
+
+// ── CONTENTS SUGGESTION PICKER ────────────────────────────────────────────
+function toggleSuggestions(boxId, e){
+  e.stopPropagation();
+  var list = document.getElementById('csl-'+boxId);
+  if(!list) return;
+  var isOpen = list.classList.contains('open');
+  // close all other open suggestion lists first
+  document.querySelectorAll('.cs-list.open').forEach(function(el){ el.classList.remove('open'); });
+  if(!isOpen){
+    // populate
+    var entries = [];
+    boxes.forEach(function(b){
+      if(b.id !== boxId && b.contents && b.contents.trim()){
+        if(entries.indexOf(b.contents.trim()) === -1) entries.push(b.contents.trim());
+      }
+    });
+    entries.sort(function(a,b){ return a.toLowerCase().localeCompare(b.toLowerCase()); });
+    if(!entries.length){
+      list.innerHTML = '<span style="padding:8px 10px;font-size:12px;color:var(--ink3);display:block">No previous entries yet \u2014 fill in more boxes first.</span>';
+    } else {
+      list.innerHTML = entries.map(function(entry){
+        // show first line + ellipsis if multi-line
+        var preview = entry.split('\n')[0].substring(0,60) + (entry.length > 60 || entry.indexOf('\n') > -1 ? '\u2026' : '');
+        return '<button class="cs-item" title="'+entry.replace(/"/g,'&quot;')+'" onclick="applySuggestion('+boxId+',this.dataset.val)" data-val="'+entry.replace(/"/g,'&quot;')+'">'+esc(preview)+'</button>';
+      }).join('');
+    }
+    list.classList.add('open');
+  }
+}
+
+function toggleNotesSuggestions(boxId, e){
+  e.stopPropagation();
+  var list = document.getElementById('nsl-'+boxId);
+  if(!list) return;
+  var isOpen = list.classList.contains('open');
+  document.querySelectorAll('.cs-list.open').forEach(function(el){ el.classList.remove('open'); });
+  if(!isOpen){
+    var entries = [];
+    boxes.forEach(function(b){
+      if(b.id !== boxId && b.notes && b.notes.trim()){
+        if(entries.indexOf(b.notes.trim()) === -1) entries.push(b.notes.trim());
+      }
+    });
+    entries.sort(function(a,b){ return a.toLowerCase().localeCompare(b.toLowerCase()); });
+    if(!entries.length){
+      list.innerHTML = '<span style="padding:10px 12px;font-size:12px;color:var(--ink3);display:block;line-height:1.5">No previous notes yet.</span>';
+    } else {
+      list.innerHTML = entries.map(function(entry){
+        return '<button class="cs-item" onclick="applyNotesSuggestion('+boxId+',this.dataset.val)" data-val="'+entry.replace(/"/g,'&quot;')+'">'+esc(entry)+'</button>';
+      }).join('');
+    }
+    list.classList.add('open');
+  }
+}
+
+function applyNotesSuggestion(boxId, val){
+  var inp = document.getElementById('notes-'+boxId);
+  if(inp){
+    inp.value = val;
+    setField(boxId, 'notes', val);
+  }
+  var list = document.getElementById('nsl-'+boxId);
+  if(list) list.classList.remove('open');
+}
+
+function applySuggestion(boxId, val){
+  var ta = document.getElementById('ta-'+boxId);
+  if(ta){
+    ta.value = val;
+    setField(boxId, 'contents', val);
+    rebuildDataLists();
+  }
+  var list = document.getElementById('csl-'+boxId);
+  if(list) list.classList.remove('open');
+}
+
+// close suggestion lists when clicking elsewhere
+document.addEventListener('click', function(){
+  document.querySelectorAll('.cs-list.open').forEach(function(el){ el.classList.remove('open'); });
+});
+
+function allCats() {
+  // merge defaults + custom, alphabetized, deduplicated
+  var merged = DEFAULT_CATS.slice();
+  customCats.forEach(function(c) {
+    if (merged.indexOf(c) === -1) merged.push(c);
+  });
+  merged.sort(function(a,b){ return a.toLowerCase().localeCompare(b.toLowerCase()); });
+  return merged;
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────────
+function uid(){ return nextId++; }
+function esc(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function markDirty(){
+  dirty = true;
+  document.getElementById('saveBar').classList.add('show');
+}
+function showBanner(msg, type, ms){
+  var el = document.getElementById('banner');
+  el.innerHTML = msg;
+  el.className = 'banner show ' + (type||'info');
+  clearTimeout(el._t);
+  if(ms !== 0) el._t = setTimeout(function(){ el.classList.remove('show'); }, ms||3000);
+}
+
+// ── CATEGORY MANAGER ─────────────────────────────────────────────────────
+function toggleCatManager(){
+  var el = document.getElementById('catManager');
+  el.classList.toggle('open');
+  document.getElementById('catToggleBtn').textContent =
+    el.classList.contains('open') ? '&#10005; Close Categories' : '&#127991; Categories';
+  if(el.classList.contains('open')) renderCatChips();
+}
+
+function renderCatChips(){
+  var el = document.getElementById('catChips');
+  var usedCats = {};
+  boxes.forEach(function(b){ if(b.category) usedCats[b.category]=true; });
+
+  var html = '';
+  // defaults first, then customs — both alphabetized within group
+  var defs = DEFAULT_CATS.slice().sort(function(a,b){return a.toLowerCase().localeCompare(b.toLowerCase())});
+  var cust = customCats.slice().sort(function(a,b){return a.toLowerCase().localeCompare(b.toLowerCase())});
+
+  defs.forEach(function(c){
+    html += '<span class="cat-chip default">'+esc(c)+'</span>';
+  });
+  cust.forEach(function(c){
+    var canDel = !usedCats[c];
+    html += '<span class="cat-chip">'+esc(c)
+      +(canDel ? '<button class="cat-chip-del" onclick="removeCat(\''+esc(c)+'\')">&#10005;</button>' : '')
+      +'</span>';
+  });
+  el.innerHTML = html;
+}
+
+function addCustomCat(){
+  var input = document.getElementById('newCatInput');
+  var val = input.value.trim();
+  if(!val){ showBanner('Please type a category name first.', 'warn'); return; }
+  // title-case first letter
+  val = val.charAt(0).toUpperCase() + val.slice(1);
+  if(allCats().indexOf(val) > -1){
+    showBanner('"'+val+'" already exists.', 'warn'); input.value=''; return;
+  }
+  customCats.push(val);
+  input.value = '';
+  markDirty();
+  renderCatChips();
+  updateCatFilters();
+  render();
+  showBanner('&#10003; Category "'+val+'" added.', 'success');
+}
+
+function removeCat(name){
+  var usedCats = {};
+  boxes.forEach(function(b){ if(b.category) usedCats[b.category]=true; });
+  if(usedCats[name]){
+    showBanner('&#9888; "'+name+'" is used by one or more boxes. Remove it from those boxes first.', 'warn', 4000);
+    return;
+  }
+  customCats = customCats.filter(function(c){ return c !== name; });
+  markDirty();
+  renderCatChips();
+  updateCatFilters();
+  render();
+}
+
+function updateCatFilters(){
+  var sel = document.getElementById('fCat');
+  var cur = sel.value;
+  var cats = allCats();
+  var html = '<option value="">All Categories</option>';
+  cats.forEach(function(c){ html += '<option'+(c===cur?' selected':'')+'>'+esc(c)+'</option>'; });
+  sel.innerHTML = html;
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────
+function render(){
+  var q  = (document.getElementById('q').value||'').toLowerCase();
+  var fs = document.getElementById('fStatus').value;
+  var fc = document.getElementById('fCat').value;
+
+  var list = boxes.filter(function(b){
+    var txt = [b.num, b.label, b.category, b.contents, b.notes].join(' ').toLowerCase();
+    return (!q || txt.indexOf(q)>-1) && (!fs||b.status===fs) && (!fc||b.category===fc);
+  });
+
+  var el = document.getElementById('boxes');
+  if(!list.length){
+    el.innerHTML = '<div class="empty"><div class="empty-icon">&#128230;</div><p>'+(
+      boxes.length===0
+        ? 'No boxes yet.<br>Tap <strong>+ New Box</strong> to start.'
+        : 'No boxes match your filters.'
+    )+'</p></div>';
+  } else {
+    el.innerHTML = list.map(cardHTML).join('');
+  }
+  updateStats();
+  updateCatFilters();
+  rebuildDataLists();
+}
+
+function cardHTML(b){
+  var photos = b.photos || [];
+  var isOpen = !!openIds[b.id];
+  var statusLabels = {open:'Open',packed:'Packed',delivered:'Delivered',unpacked:'Unpacked'};
+  var pillClass    = {open:'pill-open',packed:'pill-packed',delivered:'pill-delivered',unpacked:'pill-unpacked'};
+
+  var thumbsHTML = photos.map(function(p,i){
+    return '<div class="thumb">'
+      +'<img src="'+( p.d||p.data||'')+'" alt="'+esc(p.n||p.name||'')+'" onclick="openLb('+b.id+','+i+')">'
+      +'<button class="thumb-del" onclick="delPhoto('+b.id+','+i+')">&#10005;</button>'
+      +'</div>';
+  }).join('');
+
+  var numStr = b.num < 10 ? '0'+b.num : String(b.num);
+  var cats   = allCats();
+
+  // build category options
+  var catOpts = '<option value="">&#8212; Select Category &#8212;</option>';
+  cats.forEach(function(c){
+    catOpts += '<option'+(b.category===c?' selected':'')+'>'+esc(c)+'</option>';
+  });
+  catOpts += '<option value="__custom__"'+(b.category && cats.indexOf(b.category)===-1?' selected':'')+'>+ Type a new category&#8230;</option>';
+
+  // show inline custom input if category not in list
+  var showCustom = b.category && cats.indexOf(b.category) === -1;
+
+  return '<div class="box-card'+(isOpen?' open':'')+'" data-id="'+b.id+'" data-status="'+b.status+'">'
+
+    // HEAD
+    +'<div class="box-head" onclick="toggle('+b.id+')">'
+    +'<div class="box-num">#'+numStr+'</div>'
+    +'<div class="box-meta">'
+    +'<div class="box-name">'
+    +esc(b.label||'Unlabeled box')
+    +(b.category?' <span class="cat-badge">'+esc(b.category)+'</span>':'')
+    +(b.fragile?' <span class="fragile-badge">&#9888; Fragile</span>':'')
+    +'</div>'
+    +'<div class="box-sub">'
+    +(photos.length?'<span>&#128247; '+photos.length+(photos.length===1?' photo':' photos')+'</span>':'')
+    +(b.contents?'<span style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(b.contents).substring(0,50)+(b.contents.length>50?'&#8230;':'')+'</span>':'')
+    +'</div>'
+    +'</div>'
+    +'<button class="status-pill '+pillClass[b.status]+'" onclick="cycleStatus(event,'+b.id+')">'+statusLabels[b.status]+'</button>'
+    +'<span class="chevron">&#9660;</span>'
+    +'</div>'
+
+    // BODY
+    +'<div class="box-body">'
+    +'<div class="fields">'
+
+    // Label — with autocomplete datalist
+    +'<div class="field wide"><label>Box Label</label>'
+    +'<input type="text" list="dl-labels" value="'+esc(b.label)+'" placeholder="e.g. Heavy books, Winter coats…" onchange="setField('+b.id+',\'label\',this.value);rebuildDataLists()" oninput="setField('+b.id+',\'label\',this.value)">'
+    +'<span class="ac-hint">&#9660; Start typing or tap the arrow to reuse a previous label</span>'
+    +'</div>'
+
+    // Category select
+    +'<div class="field"><label>Category</label>'
+    +'<select class="cat-select" onchange="handleCatSelect('+b.id+',this)">'
+    +catOpts
+    +'</select>'
+    +'</div>'
+
+    // Priority
+    +'<div class="field"><label>Priority</label>'
+    +'<select onchange="setField('+b.id+',\'priority\',this.value)">'
+    +'<option value="1"'+(b.priority==='1'?' selected':'')+'>1 &#8212; Need first</option>'
+    +'<option value="2"'+(b.priority==='2'?' selected':'')+'>2 &#8212; Medium</option>'
+    +'<option value="3"'+(b.priority==='3'?' selected':'')+'>3 &#8212; Can wait</option>'
+    +'</select></div>'
+
+    // Inline custom category input
+    +'<div class="field wide custom-cat-row'+(showCustom?' show':'')+'" id="ccrow-'+b.id+'">'
+    +'<label>New Category Name</label>'
+    +'<input type="text" id="ccinput-'+b.id+'" value="'+esc(showCustom?b.category:'')+'" placeholder="Type your custom category…" maxlength="40"'
+    +' onkeydown="if(event.key===\'Enter\'){saveCustomCat('+b.id+');event.preventDefault()}">'
+    +'<span class="custom-cat-hint">Press Enter or tap Save to add this category to your list</span>'
+    +'<button class="btn btn-purple btn-sm" style="margin-top:4px;width:fit-content" onclick="saveCustomCat('+b.id+')">Save Category</button>'
+    +'</div>'
+
+    // Contents — textarea (preserves line breaks) + suggestion picker
+    +'<div class="field wide"><label>Contents</label>'
+    +'<div class="contents-wrap">'
+    +'<textarea id="ta-'+b.id+'" placeholder="Paste or type your inventory list — each item on its own line…" onchange="setField('+b.id+',\'contents\',this.value);rebuildDataLists()" oninput="setField('+b.id+',\'contents\',this.value)">'+esc(b.contents)+'</textarea>'
+    +'<div class="contents-suggestions" id="cs-'+b.id+'">'
+    +'<button class="cs-toggle" onclick="toggleSuggestions('+b.id+',event)" title="Reuse a previous contents entry">&#9660; Previous entries</button>'
+    +'<div class="cs-list" id="csl-'+b.id+'"></div>'
+    +'</div>'
+    +'</div>'
+    +'</div>'
+
+    // Weight + Fragile
+    +'<div class="field"><label>Weight (lbs)</label>'
+    +'<input type="number" value="'+esc(b.weight)+'" placeholder="e.g. 25" onchange="setField('+b.id+',\'weight\',this.value)"></div>'
+
+    +'<div class="field"><label>Fragile?</label>'
+    +'<select onchange="setField('+b.id+',\'fragile\',this.value===\'yes\')">'
+    +'<option value="no"'+(b.fragile?'':' selected')+'>No</option>'
+    +'<option value="yes"'+(b.fragile?' selected':'')+'>Yes &#9888;</option>'
+    +'</select></div>'
+
+    // Notes
+    +'<div class="field wide"><label>Notes</label>'
+    +'<div class="contents-wrap">'
+    +'<input type="text" id="notes-'+b.id+'" value="'+esc(b.notes)+'" placeholder="e.g. Stack upright, deliver to studio first…" onchange="setField('+b.id+',\'notes\',this.value)" oninput="setField('+b.id+',\'notes\',this.value)">'
+    +'<div class="contents-suggestions" id="ns-'+b.id+'">'
+    +'<button class="cs-toggle" onclick="toggleNotesSuggestions('+b.id+',event)" title="Reuse a previous note">&#9660; Previous entries</button>'
+    +'<div class="cs-list" id="nsl-'+b.id+'"></div>'
+    +'</div>'
+    +'</div>'
+    +'</div>'
+
+    +'</div>'
+
+    // Photos
+    +'<div class="photo-sec">'
+    +'<div class="photo-sec-label">&#128247; Photos ('+photos.length+')</div>'
+    +(thumbsHTML?'<div class="photo-grid">'+thumbsHTML+'</div>':'')
+    +'<div class="drop-zone" id="dz-'+b.id+'"'
+    +' ondragover="dzOver(event,'+b.id+')" ondragleave="dzLeave(event,'+b.id+')" ondrop="dzDrop(event,'+b.id+')">'
+    +'<input type="file" accept="image/*" multiple onchange="filesChosen(event,'+b.id+')">'
+    +'<div class="dz-icon">&#128247;</div>'
+    +'<div class="dz-text"><strong>Tap to take photo or choose from library</strong><br>'
+    +'<span style="font-size:11px">On desktop: drag &amp; drop images here</span></div>'
+    +'</div>'
+    +'</div>'
+
+    +'<div style="display:flex;justify-content:flex-end;margin-top:14px">'
+    +'<button class="btn btn-danger btn-sm" onclick="delBox('+b.id+')">&#128465; Delete Box</button>'
+    +'</div>'
+    +'</div>'
+
+    +'</div>';
+}
+
+// ── CATEGORY SELECT HANDLER ───────────────────────────────────────────────
+function handleCatSelect(id, sel){
+  var val = sel.value;
+  var row = document.getElementById('ccrow-'+id);
+  var inp = document.getElementById('ccinput-'+id);
+  if(val === '__custom__'){
+    if(row){ row.classList.add('show'); }
+    if(inp){ inp.focus(); }
+    // don't save __custom__ as the category
+  } else {
+    if(row) row.classList.remove('show');
+    setField(id, 'category', val);
+  }
+}
+
+function saveCustomCat(boxId){
+  var inp = document.getElementById('ccinput-'+boxId);
+  if(!inp) return;
+  var val = inp.value.trim();
+  if(!val){ showBanner('Please type a category name.', 'warn'); return; }
+  val = val.charAt(0).toUpperCase() + val.slice(1);
+  // add to custom list if not already there
+  if(allCats().indexOf(val) === -1){
+    customCats.push(val);
+    updateCatFilters();
+    renderCatChips();
+  }
+  setField(boxId, 'category', val);
+  var row = document.getElementById('ccrow-'+boxId);
+  if(row) row.classList.remove('show');
+  showBanner('&#10003; Category "'+val+'" saved.', 'success');
+  render();
+}
+
+// ── BOX ACTIONS ───────────────────────────────────────────────────────────
+function addBox(){
+  var b = {
+    id:uid(), num:boxes.length+1,
+    label:'', category:'', contents:'', notes:'',
+    priority:'2', weight:'', fragile:false,
+    status:'open', photos:[]
+  };
+  boxes.push(b);
+  openIds[b.id] = true;
+  markDirty();
+  render();
+  setTimeout(function(){
+    var el = document.querySelector('.box-card[data-id="'+b.id+'"]');
+    if(el){ el.scrollIntoView({behavior:'smooth',block:'start'}); }
+  }, 80);
+}
+
+function toggle(id){
+  openIds[id] = !openIds[id];
+  render();
+}
+
+function cycleStatus(e, id){
+  e.stopPropagation();
+  var b = boxes.find(function(x){return x.id===id});
+  if(!b) return;
+  var c = ['open','packed','delivered','unpacked'];
+  b.status = c[(c.indexOf(b.status)+1)%c.length];
+  markDirty();
+  render();
+}
+
+function setField(id, field, value){
+  var b = boxes.find(function(x){return x.id===id});
+  if(!b) return;
+  b[field] = value;
+  markDirty();
+  updateStats();
+}
+
+function delBox(id){
+  if(!confirm('Delete this box and all its photos?')) return;
+  boxes = boxes.filter(function(b){return b.id!==id});
+  delete openIds[id];
+  markDirty();
+  render();
+}
+
+// ── PHOTOS ────────────────────────────────────────────────────────────────
+function dzOver(e,id){e.preventDefault();var d=document.getElementById('dz-'+id);if(d)d.classList.add('over')}
+function dzLeave(e,id){var d=document.getElementById('dz-'+id);if(d)d.classList.remove('over')}
+function dzDrop(e,id){
+  e.preventDefault(); dzLeave(e,id);
+  var files=Array.from(e.dataTransfer.files).filter(function(f){return f.type.startsWith('image/')});
+  loadFiles(files,id);
+}
+function filesChosen(e,id){loadFiles(Array.from(e.target.files),id)}
+
+function loadFiles(files, id){
+  if(!files.length) return;
+  var b = boxes.find(function(x){return x.id===id});
+  if(!b) return;
+  var count = 0;
+  files.forEach(function(file){
+    var reader = new FileReader();
+    reader.onload = function(ev){
+      b.photos.push({n:file.name, d:ev.target.result});
+      count++;
+      if(count===files.length){
+        markDirty();
+        openIds[id]=true;
+        render();
+        showBanner('&#10003; '+files.length+(files.length===1?' photo':' photos')+' added to Box #'+b.num, 'success');
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function delPhoto(boxId, idx){
+  if(!confirm('Remove this photo?')) return;
+  var b = boxes.find(function(x){return x.id===boxId});
+  if(!b) return;
+  b.photos.splice(idx,1);
+  markDirty();
+  openIds[boxId]=true;
+  render();
+}
+
+// ── LIGHTBOX ──────────────────────────────────────────────────────────────
+function openLb(boxId, idx){
+  var b = boxes.find(function(x){return x.id===boxId});
+  if(!b||!b.photos[idx]) return;
+  var _lbRaw = b.photos[idx].d || b.photos[idx].data || '';
+  if(_lbRaw && _lbRaw.indexOf('data:') !== 0){
+    var _lbName = b.photos[idx].n || b.photos[idx].name || '';
+    var _lbExt  = _lbName.split('.').pop().toLowerCase();
+    var _lbMime = {jpg:'jpeg',jpeg:'jpeg',png:'png',gif:'gif',webp:'webp'}[_lbExt]||'jpeg';
+    _lbRaw = 'data:image/'+_lbMime+';base64,'+_lbRaw;
+  }
+  document.getElementById('lb-img').src = _lbRaw;
+  document.getElementById('lb').classList.add('show');
+}
+function closeLb(){
+  document.getElementById('lb').classList.remove('show');
+  document.getElementById('lb-img').src='';
+}
+
+// ── STATS ─────────────────────────────────────────────────────────────────
+function updateStats(){
+  document.getElementById('sTotal').textContent  = boxes.length;
+  document.getElementById('sPacked').textContent = boxes.filter(function(b){return b.status==='packed'}).length;
+  document.getElementById('sPhoto').textContent  = boxes.filter(function(b){return b.photos&&b.photos.length>0}).length;
+  document.getElementById('sDone').textContent   = boxes.filter(function(b){return b.status==='delivered'}).length;
+}
+
+// ── MODALS ────────────────────────────────────────────────────────────────
+function showExport(){ document.getElementById('exportModal').classList.add('show'); }
+function showImport(){ document.getElementById('importModal').classList.add('show'); }
+function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+
+document.querySelectorAll('.overlay').forEach(function(el){
+  el.addEventListener('click', function(e){ if(e.target===el) el.classList.remove('show'); });
+});
+
+// ── EXPORT ────────────────────────────────────────────────────────────────
+function doExportJSON(){
+  var data = JSON.stringify({v:3, boxes:boxes, nextId:nextId, customCats:customCats}, null, 2);
+  var blob = new Blob([data],{type:'application/json'});
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href=url; a.download='BoxScout_backup.json';
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 1000);
+  dirty = false;
+  document.getElementById('saveBar').classList.remove('show');
+  closeModal('exportModal');
+  showBanner('&#10003; Backup saved! Keep this file safe.', 'success');
+}
+
+function doExportCSV(){
+  var rows=[['Box #','Label','Category','Priority','Contents','Photos','Fragile','Weight','Status','Notes']];
+  boxes.forEach(function(b){
+    rows.push([b.num,b.label,b.category,b.priority,b.contents,(b.photos||[]).length,b.fragile?'Yes':'No',b.weight,b.status,b.notes]);
+  });
+  var csv=rows.map(function(r){
+    return r.map(function(v){return '"'+String(v||'').replace(/"/g,'""')+'"';}).join(',');
+  }).join('\n');
+  var blob=new Blob([csv],{type:'text/csv'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url; a.download='BoxScout_boxes.csv';
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){URL.revokeObjectURL(url);a.remove();},1000);
+  closeModal('exportModal');
+}
+
+// ── IMPORT ────────────────────────────────────────────────────────────────
+function triggerImport(){ closeModal('importModal'); document.getElementById('importFile').click(); }
+
+function doImport(e){
+  var file = e.target.files[0];
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev){
+    try{
+      var d = JSON.parse(ev.target.result);
+      if(!d.boxes) throw new Error('bad format');
+      if(!confirm('Load '+d.boxes.length+' boxes from backup?\nThis replaces your current session.')) return;
+      // Normalize boxes from any version (desktop or web app)
+      boxes = d.boxes.map(function(b){
+        // 1. Status: desktop saves "Open", web needs "open"
+        if(b.status) b.status = b.status.toLowerCase();
+        // 2. Photos: desktop saves {name,data}, web uses {n,d}
+        if(b.photos && b.photos.length){
+          b.photos = b.photos.map(function(p){
+            return {
+              n: p.n || p.name || '',
+              d: (function(raw){
+                   if(!raw) return '';
+                   // Already a full data URI — use as-is
+                   if(raw.indexOf('data:') === 0) return raw;
+                   // Raw base64 from desktop app — add appropriate prefix
+                   var name = p.n || p.name || '';
+                   var ext  = name.split('.').pop().toLowerCase();
+                   var mime = {jpg:'jpeg',jpeg:'jpeg',png:'png',
+                               gif:'gif',bmp:'bmp',webp:'webp'}[ext] || 'jpeg';
+                   return 'data:image/'+mime+';base64,'+raw;
+                 })(p.d || p.data || '')
+            };
+          });
+        }
+        // 3. Priority: ensure it's a string
+        if(b.priority !== undefined) b.priority = String(b.priority);
+        return b;
+      });
+      nextId     = d.nextId || (boxes.length+1);
+      customCats = d.customCats || [];
+      openIds    = {};
+      dirty      = false;
+      document.getElementById('saveBar').classList.remove('show');
+      render();
+      showBanner('&#10003; Loaded '+boxes.length+' boxes and '+(customCats.length)+' custom categories.', 'success');
+      rebuildDataLists();
+    } catch(err){
+      showBanner('&#9888; Could not read file &#8212; make sure it is a BoxScout .json backup.', 'warn', 5000);
+    }
+    e.target.value='';
+  };
+  reader.readAsText(file);
+}
+
+// ── KEYBOARD ──────────────────────────────────────────────────────────────
+document.addEventListener('keydown', function(e){
+  if(e.key==='Escape'){
+    document.getElementById('lb').classList.remove('show');
+    document.querySelectorAll('.overlay.show').forEach(function(el){el.classList.remove('show');});
+  }
+});
+
+// ── PRINT PREPARATION ─────────────────────────────────────────────────────
+// ── PRINT: generate standalone HTML, open in new tab ─────────────────────
+// This avoids freezing the browser by not manipulating the live DOM.
+function printBoxes(){
+  var SC = {open:'#888888',packed:'#2A7A2A',delivered:'#1A4A9A',unpacked:'#8A5A00'};
+  var PD = {'1':'1 — Need first','2':'2 — Medium','3':'3 — Can wait'};
+
+  function he(s){
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  var pages = boxes.map(function(b){
+    var num    = b.num < 10 ? '0'+b.num : String(b.num);
+    var stc    = SC[b.status] || '#888';
+    var pri    = PD[String(b.priority)] || '';
+    var wt     = b.weight ? he(b.weight)+' lbs' : '—';
+    var cat    = he(b.category || '');
+    var lbl    = he(b.label || 'Unlabeled box');
+    var cont   = he(b.contents || '').replace(/\n/g,'<br>');
+    var nts    = he(b.notes || '');
+    var fr     = b.fragile ? 'Yes ⚠' : 'No';
+    var stlbl  = b.status ? b.status.charAt(0).toUpperCase()+b.status.slice(1) : '';
+
+    var phHtml = '';
+    (b.photos||[]).forEach(function(p){
+      var raw = p.d || p.data || '';
+      if(!raw) return;
+      if(raw.indexOf('data:') !== 0){
+        var ext = (p.n||p.name||'').split('.').pop().toLowerCase();
+        var mime = {jpg:'jpeg',jpeg:'jpeg',png:'png',gif:'gif',webp:'webp'}[ext]||'jpeg';
+        raw = 'data:image/'+mime+';base64,'+raw;
+      }
+      phHtml += '<div class="thumb"><img src="'+raw+'" alt="'+he(p.n||p.name||'')+'"></div>';
+    });
+
+    return '<div class="page">'
+      +'<div class="ph">'
+      +'<div class="bn">#'+num+'</div>'
+      +'<div class="bm">'
+      +'<div class="bt">'+lbl
+      +(b.fragile ? ' <span class="fr">⚠ FRAGILE</span>' : '')
+      +'</div>'
+      +(cat ? '<div class="cat">'+cat+'</div>' : '')
+      +'</div>'
+      +'<div class="sb" style="background:'+stc+';color:white">'+stlbl+'</div>'
+      +'</div>'
+      +'<div class="ir">'
+      +'<div class="ic"><span class="lbl">CATEGORY</span><span class="val">'+(cat||'—')+'</span></div>'
+      +'<div class="ic"><span class="lbl">PRIORITY</span><span class="val">'+pri+'</span></div>'
+      +'<div class="ic"><span class="lbl">WEIGHT</span><span class="val">'+wt+'</span></div>'
+      +'<div class="ic"><span class="lbl">FRAGILE?</span><span class="val">'+fr+'</span></div>'
+      +'<div class="ic"><span class="lbl">NOTES</span><span class="val">'+(nts||'—')+'</span></div>'
+      +'</div>'
+      +(phHtml ? '<div class="ps"><div class="sl">PHOTOS ('+b.photos.length+')</div><div class="pg">'+phHtml+'</div></div>' : '')
+      +'<div class="cs"><div class="sl">CONTENTS</div>'
+      +'<div class="ct">'+(cont || '<em style="color:#aaa">No contents listed</em>')+'</div>'
+      +'</div>'
+      +'</div>';
+  }).join('');
+
+  var printHTML = '<!DOCTYPE html><html lang="en"><head>'
+    +'<meta charset="UTF-8"><title>BoxScout — Print</title><style>'
+    +'@page{size:8.5in 11in portrait;margin:.5in}'
+    +'*{box-sizing:border-box;margin:0;padding:0}'
+    +'body{font-family:Georgia,serif;background:white;color:#1A1A1A}'
+    +'.page{width:100%;min-height:10in;height:10in;page-break-after:always;break-after:page;'
+    +'display:flex;flex-direction:column;border:2px solid #1A1A1A;border-left-width:6px;overflow:hidden}'
+    +'.page:last-child{page-break-after:auto;break-after:auto}'
+    +'.ph{display:flex;align-items:center;gap:16px;padding:20px 24px 16px;'
+    +'border-bottom:1px solid #D0CCC5;flex-shrink:0}'
+    +'.bn{font-family:Georgia,serif;font-size:52pt;font-weight:700;min-width:96px;line-height:1;color:#1A1A1A}'
+    +'.bm{flex:1;display:flex;flex-direction:column;gap:3px}'
+    +'.bt{font-size:18pt;font-weight:700;display:flex;align-items:center;gap:10px;flex-wrap:wrap;line-height:1.1}'
+    +'.cat{font-size:11pt;font-weight:400;text-decoration:underline;text-underline-offset:3px;color:#555;display:block}'
+    +'.fr{font-size:9pt;font-weight:700;font-family:Arial,sans-serif;'
+    +'background:#FFE5E5;color:#AA0000;padding:2px 8px}'
+    +'.sb{font-size:9pt;font-weight:700;font-family:Arial,sans-serif;'
+    +'padding:5px 14px;white-space:nowrap;align-self:flex-start;'
+    +'-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+    +'.ir{display:flex;flex-wrap:wrap;border-bottom:1px solid #D0CCC5;flex-shrink:0}'
+    +'.ic{flex:1;min-width:100px;padding:8px 16px;border-right:1px solid #D0CCC5}'
+    +'.ic:last-child{border-right:none}'
+    +'.lbl{display:block;font-size:7pt;font-weight:700;font-family:Arial,sans-serif;'
+    +'color:#999;text-transform:uppercase;letter-spacing:.8px;margin-bottom:2px}'
+    +'.val{font-size:11pt;color:#1A1A1A}'
+    +'.sl{font-size:7pt;font-weight:700;font-family:Arial,sans-serif;color:#999;'
+    +'text-transform:uppercase;letter-spacing:.8px;padding:8px 16px 4px;'
+    +'border-bottom:1px solid #D0CCC5}'
+    +'.ps{flex-shrink:0}'
+    +'.pg{display:flex;flex-wrap:wrap;gap:10px;padding:10px 16px}'
+    +'.thumb{width:200px;height:200px;border:1px solid #D0CCC5;overflow:hidden}'
+    +'.thumb img{width:100%;height:100%;object-fit:cover}'
+    +'.cs{flex:1;display:flex;flex-direction:column;overflow:hidden}'
+    +'.ct{flex:1;padding:12px 16px;font-size:13pt;line-height:1.65;'
+    +'color:#1A1A1A;white-space:pre-wrap;word-break:break-word}'
+    +'@media screen{body{padding:24px;background:#E8E5DF}'
+    +'.page{margin-bottom:32px;background:white;box-shadow:0 2px 12px rgba(0,0,0,.08)}'
+    +'.pbtn{position:fixed;top:18px;right:22px;background:#1A1A1A;color:white;'
+    +'border:none;padding:10px 22px;font-family:Arial,sans-serif;font-size:13px;'
+    +'font-weight:700;cursor:pointer;z-index:100}}'
+    +'@media print{.pbtn{display:none}}'
+    +'</style></head><body>'
+    +'<button class="pbtn" onclick="window.print()">PRINT / SAVE PDF</button>'
+    +pages
+    +'</body></html>';
+
+  var blob = new Blob([printHTML], {type:'text/html'});
+  var url  = URL.createObjectURL(blob);
+  var win  = window.open(url, '_blank');
+  if(!win){
+    alert('Pop-up blocked. Please allow pop-ups for this page and try again.');
+  }
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
+}
+
+window.addEventListener('beforeunload', function(e){
+  if(dirty){ e.preventDefault(); e.returnValue='Unsaved changes! Export a backup first.'; return e.returnValue; }
+});
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+updateCatFilters();
+render();
+rebuildDataLists();
+showBanner('&#128230; Welcome to BoxScout! Click <strong>+ NEW BOX</strong> to start, or <strong>LOAD</strong> to restore a backup.', 'info', 6000);
+
+// ── MOBILE LEFT PANEL TOGGLE ─────────────────────────────────────────────
+function toggleLeftPanel(){
+  var panel    = document.querySelector('.left-panel');
+  var backdrop = document.getElementById('leftBackdrop');
+  if(!panel) return;
+  var isOpen = panel.classList.contains('mobile-open');
+  if(isOpen){
+    panel.classList.remove('mobile-open');
+    if(backdrop) backdrop.classList.remove('show');
+  } else {
+    panel.classList.add('mobile-open');
+    if(backdrop) backdrop.classList.add('show');
+  }
+}
+
+// ── EXPAND ALL / COLLAPSE ALL ────────────────────────────────────────────
+var _allExpanded = false;
+function expandAll(){
+  var btn = document.getElementById('expandAllBtn');
+  _allExpanded = !_allExpanded;
+  if(_allExpanded){
+    boxes.forEach(function(b){ openIds[b.id] = true; });
+    if(btn) btn.textContent = 'COLLAPSE ALL';
+  } else {
+    openIds = {};
+    if(btn) btn.textContent = 'EXPAND ALL';
+  }
+  render();
+}
+
+// ── LEFT PANEL ────────────────────────────────────────────────────────────
+var _selectedId = null;
+
+function renderLeftPanel(){
+  var q  = (document.getElementById('q').value||''). toLowerCase();
+  var fs = document.getElementById('fStatus').value;
+  var fc = document.getElementById('fCat').value;
+  var filtered = boxes.filter(function(b){
+    var txt = [b.num,b.label,b.category,b.contents,b.notes].join(' ').toLowerCase();
+    return (!q||txt.indexOf(q)>-1)&&(!fs||b.status===fs)&&(!fc||b.category===fc);
+  });
+  var listEl = document.getElementById('leftList');
+  var countEl = document.getElementById('leftCount');
+  if(!listEl) return;
+  if(countEl) countEl.textContent = filtered.length+' / '+boxes.length;
+  // calc max width for auto-sizing
+  var maxLen = 10;
+  listEl.innerHTML = filtered.map(function(b){
+    var num = b.num < 10 ? '0'+b.num : String(b.num);
+    var row = '#'+num+'  '+(b.label||'Unlabeled');
+    maxLen = Math.max(maxLen, row.length);
+    var sel = (_selectedId === b.id) ? ' selected' : '';
+    return '<button class="left-item'+sel+'" onclick="selectBox('+b.id+')">'+esc(row)+'</button>';
+  }).join('');
+  // auto-size: ~8px per char in Courier New at 10px
+  var leftPanel = document.querySelector('.left-panel');
+  if(leftPanel) leftPanel.style.minWidth = Math.min(Math.max(maxLen * 7.5 + 28, 140), 320) + 'px';
+}
+
+function selectBox(id){
+  _selectedId = id;
+  // open this card and ensure it's visible
+  openIds[id] = true;
+  render();
+  setTimeout(function(){
+    var card = document.querySelector('.box-card[data-id="'+id+'"]');
+    if(card){
+      card.scrollIntoView({behavior:'smooth',block:'start'});
+    }
+  }, 60);
+  // Auto-close left panel on mobile after selecting
+  if(window.innerWidth < 600){
+    var panel    = document.querySelector('.left-panel');
+    var backdrop = document.getElementById('leftBackdrop');
+    if(panel)    panel.classList.remove('mobile-open');
+    if(backdrop) backdrop.classList.remove('show');
+  }
+}
+
+function deleteSelected(){
+  if(!_selectedId){
+    alert('Select a box in the left panel first.');
+    return;
+  }
+  var b = boxes.find(function(x){return x.id===_selectedId});
+  if(!b) return;
+  if(!confirm('Delete Box #'+b.num+' — '+(b.label||'Unlabeled')+'?\nThis cannot be undone.')) return;
+  boxes = boxes.filter(function(x){return x.id!==_selectedId});
+  delete openIds[_selectedId];
+  _selectedId = null;
+  markDirty();
+  render();
+}
+
+// ── THEME TOGGLE ──────────────────────────────────────────────────────────
+var _isDark = false;
+function toggleTheme(){
+  _isDark = !_isDark;
+  document.documentElement.setAttribute('data-theme', _isDark ? 'dark' : '');
+  document.getElementById('themeBtn').textContent = _isDark ? '\u2600\u00a0\u00a0LIGHT' : '\u263e\u00a0\u00a0DARK';
+}
+
+// ── HOOK renderLeftPanel into render ──────────────────────────────────────
+var _origRender = render;
+render = function(){
+  _origRender();
+  renderLeftPanel();
+};
+renderLeftPanel();
+
+// ── PERSISTENT STORAGE (iOS Session Persistence) ────────────────────
+// Auto-save to localStorage whenever data changes
+var _origMarkDirty = markDirty;
+markDirty = function(){
+  _origMarkDirty();
+  autoSaveToLocalStorage();
+};
+
+function autoSaveToLocalStorage(){
+  try {
+    var dataToSave = {
+      boxes: boxes,
+      customCats: customCats,
+      nextId: nextId
+    };
+    localStorage.setItem('boxscout_autosave', JSON.stringify(dataToSave));
+  } catch(e) {
+    console.warn('localStorage save failed (data still in memory):', e);
+  }
+}
+
+function restoreFromLocalStorage(){
+  try {
+    var saved = localStorage.getItem('boxscout_autosave');
+    if(saved){
+      var data = JSON.parse(saved);
+      if(data.boxes && Array.isArray(data.boxes)){
+        boxes = data.boxes;
+        customCats = data.customCats || [];
+        nextId = data.nextId || (boxes.length + 1);
+        dirty = false;
+        console.log('[Persistence] Restored '+boxes.length+' boxes from previous session');
+        return true;
+      }
+    }
+  } catch(e) {
+    console.warn('[Persistence] Could not restore:', e);
+  }
+  return false;
+}
+
+// Try to restore on page load
+if(restoreFromLocalStorage()){
+  showBanner('&#128190; Session restored! You have '+boxes.length+' box'+(boxes.length!==1?'es':'')+'.', 'info', 4000);
+  updateCatFilters();
+  render();
+  rebuildDataLists();
+}
+</script>
+</body>
+</html>
